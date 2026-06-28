@@ -1,0 +1,48 @@
+# Local development stack. Supabase services here are a lightweight Postgres +
+# Studio setup; for full Auth/Storage parity use the Supabase CLI
+# (`supabase start`). Redis stands in for Upstash locally.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    env_file:
+      - .env.local
+    depends_on:
+      - supabase-db
+      - redis
+
+  supabase-db:
+    image: supabase/postgres:15.1.0.147
+    ports:
+      - '54322:5432'
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - supabase-db-data:/var/lib/postgresql/data
+      - ./supabase/migrations:/docker-entrypoint-initdb.d
+
+  supabase-studio:
+    image: supabase/studio:latest
+    ports:
+      - '54323:3000'
+    environment:
+      SUPABASE_URL: http://supabase-db:5432
+    depends_on:
+      - supabase-db
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    command: redis-server --save 60 1
+    volumes:
+      - redis-data:/data
+
+volumes:
+  supabase-db-data:
+  redis-data:

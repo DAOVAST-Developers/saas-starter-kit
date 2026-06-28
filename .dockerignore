@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.gitlab-ci.yml
+npm-debug.log*
+Dockerfile
+.dockerignore
+.env
+.env*.local
+coverage
+*.md
+.vscode
+.idea
+supabase/.branches
+supabase/.temp
