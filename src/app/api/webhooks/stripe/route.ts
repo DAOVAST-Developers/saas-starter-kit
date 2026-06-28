@@ -2,7 +2,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 import type Stripe from 'stripe';
 import { stripe } from '@/lib/stripe/client';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { planFromPriceId } from '@/lib/stripe/config';
+import { planFromPriceId, PLANS } from '@/lib/stripe/config';
+import { sendInvoiceEmail } from '@/lib/email/send';
+import type { PlanTier } from '@/types/database';
 
 // Stripe needs the raw body for signature verification.
 export const dynamic = 'force-dynamic';
@@ -72,8 +74,8 @@ export async function POST(request: NextRequest) {
             invoice.subscription as string,
           );
           await upsertSubscription(admin, subscription);
+          await notifyInvoicePaid(admin, subscription, invoice);
         }
-        // TODO(Phase 8): send invoice email via Resend.
         break;
       }
       case 'invoice.payment_failed': {
@@ -84,7 +86,7 @@ export async function POST(request: NextRequest) {
           );
           await upsertSubscription(admin, subscription);
         }
-        // TODO(Phase 8): notify user of failed payment.
+        // Payment-failure notification can be added here when desired.
         break;
       }
     }
@@ -99,6 +101,33 @@ export async function POST(request: NextRequest) {
 }
 
 type AdminClient = ReturnType<typeof createAdminClient>;
+
+async function notifyInvoicePaid(
+  admin: AdminClient,
+  subscription: Stripe.Subscription,
+  invoice: Stripe.Invoice,
+) {
+  const userId = subscription.metadata?.user_id;
+  if (!userId) return;
+
+  const { data } = await admin.auth.admin.getUserById(userId);
+  const email = data.user?.email;
+  if (!email) return;
+
+  const priceId = subscription.items.data[0]?.price.id ?? null;
+  const plan = planFromPriceId(priceId) as PlanTier;
+  const amount = ((invoice.amount_paid ?? 0) / 100).toLocaleString('en-US', {
+    style: 'currency',
+    currency: (invoice.currency ?? 'usd').toUpperCase(),
+  });
+
+  await sendInvoiceEmail(email, {
+    name: data.user?.user_metadata?.full_name ?? 'there',
+    amount,
+    plan: PLANS[plan].name,
+    periodEnd: new Date(subscription.current_period_end * 1000).toLocaleDateString(),
+  });
+}
 
 async function upsertSubscription(
   admin: AdminClient,
