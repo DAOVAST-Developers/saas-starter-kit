@@ -17,7 +17,9 @@ jest.mock('@/lib/supabase/server', () => ({
 
 const sessionsCreate = jest.fn(async () => ({ url: 'https://checkout.stripe.com/x' }));
 jest.mock('@/lib/stripe/client', () => ({
-  stripe: { checkout: { sessions: { create: (...a: any[]) => (sessionsCreate as any)(...a) } } },
+  getStripeClient: () => ({
+    checkout: { sessions: { create: (...a: any[]) => (sessionsCreate as any)(...a) } },
+  }),
 }));
 
 import { POST } from './route';

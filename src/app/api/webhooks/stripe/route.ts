@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import type Stripe from 'stripe';
-import { stripe } from '@/lib/stripe/client';
+import { getStripeClient } from '@/lib/stripe/client';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { planFromPriceId, PLANS } from '@/lib/stripe/config';
 import { sendInvoiceEmail } from '@/lib/email/send';
@@ -26,9 +26,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
   }
 
+  let stripeClient;
+  try {
+    stripeClient = getStripeClient();
+  } catch {
+    return NextResponse.json({ error: 'Stripe is not configured' }, { status: 500 });
+  }
+
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    event = stripeClient.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Invalid signature';
     return NextResponse.json({ error: `Webhook Error: ${message}` }, { status: 400 });
@@ -54,7 +61,7 @@ export async function POST(request: NextRequest) {
       case 'checkout.session.completed': {
         const session = event.data.object;
         if (session.mode === 'subscription' && session.subscription) {
-          const subscription = await stripe.subscriptions.retrieve(
+          const subscription = await stripeClient.subscriptions.retrieve(
             session.subscription as string,
           );
           await upsertSubscription(admin, subscription, session.metadata?.user_id);
@@ -70,7 +77,7 @@ export async function POST(request: NextRequest) {
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object;
         if (invoice.subscription) {
-          const subscription = await stripe.subscriptions.retrieve(
+          const subscription = await stripeClient.subscriptions.retrieve(
             invoice.subscription as string,
           );
           await upsertSubscription(admin, subscription);
@@ -81,7 +88,7 @@ export async function POST(request: NextRequest) {
       case 'invoice.payment_failed': {
         const invoice = event.data.object;
         if (invoice.subscription) {
-          const subscription = await stripe.subscriptions.retrieve(
+          const subscription = await stripeClient.subscriptions.retrieve(
             invoice.subscription as string,
           );
           await upsertSubscription(admin, subscription);

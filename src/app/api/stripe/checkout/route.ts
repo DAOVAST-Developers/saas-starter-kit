@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { stripe } from '@/lib/stripe/client';
+import { getStripeClient } from '@/lib/stripe/client';
 import { createClient } from '@/lib/supabase/server';
 
 /**
@@ -29,6 +29,13 @@ export async function POST(request: NextRequest) {
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? request.nextUrl.origin;
 
+  let stripeClient;
+  try {
+    stripeClient = getStripeClient();
+  } catch {
+    return NextResponse.json({ error: 'Stripe is not configured' }, { status: 500 });
+  }
+
   // Reuse an existing Stripe customer if we have one for this user.
   const { data: existing } = await (supabase as any)
     .from('subscriptions')
@@ -38,7 +45,7 @@ export async function POST(request: NextRequest) {
     .limit(1)
     .maybeSingle() as { data: { stripe_customer_id: string | null } | null };
 
-  const session = await stripe.checkout.sessions.create({
+  const session = await stripeClient.checkout.sessions.create({
     mode: 'subscription',
     line_items: [{ price: priceId, quantity: 1 }],
     customer: existing?.stripe_customer_id ?? undefined,

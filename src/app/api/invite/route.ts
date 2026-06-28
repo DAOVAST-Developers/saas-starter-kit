@@ -21,18 +21,12 @@ export async function POST(request: Request) {
     }
 
     // 1. Verify that the current user is an owner/admin of the organization
-    const { data: currentMember, error: memberCheckError } = await (supabase as any)
-      .from("organization_members")
-      .select("role, organizations(name)")
-      .eq("org_id", orgId)
-      .eq("user_id", user.id)
-      .single() as {
-        data: {
-          role: string;
-          organizations: { name: string } | null;
-        } | null;
-        error: any;
-      };
+    const { data: currentMember, error: memberCheckError } = await supabase
+      .from('organization_members')
+      .select('role')
+      .eq('org_id', orgId)
+      .eq('user_id', user.id)
+      .maybeSingle();
 
     if (memberCheckError || !currentMember || !["owner", "admin"].includes(currentMember.role)) {
       return NextResponse.json(
@@ -41,7 +35,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const orgName = (currentMember as any).organizations.name;
+    const { data: organization } = await supabase
+      .from('organizations')
+      .select('name')
+      .eq('id', orgId)
+      .maybeSingle();
+
+    const orgName = organization?.name ?? 'your organization';
 
     // 2. Check if the user is already a member of the organization
     // First, find if a user with this email exists in profiles/auth
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     expiresAt.setDate(expiresAt.getDate() + 7);
 
     // 4. Save the invitation record to the database
-    const { error: inviteError } = await (supabase as any)
+    const { error: inviteError } = await supabase
       .from("organization_invitations")
       .insert({
         org_id: orgId,
@@ -84,10 +84,11 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Invite API error:", error);
+    const message = error instanceof Error ? error.message : "Internal Server Error";
     return NextResponse.json(
-      { error: error.message || "Internal Server Error" },
+      { error: message },
       { status: 500 }
     );
   }

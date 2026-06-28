@@ -11,10 +11,10 @@ const deleteEqMock = jest.fn(async () => ({ error: null }));
 const upsertMock = jest.fn(async () => ({ error: null }));
 
 jest.mock('@/lib/stripe/client', () => ({
-  stripe: {
+  getStripeClient: () => ({
     webhooks: { constructEvent: (...a: any[]) => (constructEvent as any)(...a) },
     subscriptions: { retrieve: (...a: any[]) => (subscriptionsRetrieve as any)(...a) },
-  },
+  }),
 }));
 
 jest.mock('@/lib/supabase/admin', () => ({

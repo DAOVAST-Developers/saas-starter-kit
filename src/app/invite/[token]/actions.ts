@@ -23,20 +23,11 @@ export async function acceptInvitation(token: string): Promise<AcceptResult> {
     return { success: false, message: 'Please sign in to accept this invitation.' };
   }
 
-  const { data: invitation } = await (supabase as any)
+  const { data: invitation } = await supabase
     .from('organization_invitations')
     .select('*')
     .eq('token', token)
-    .maybeSingle() as {
-      data: {
-        id: string;
-        org_id: string;
-        email: string;
-        role: string;
-        status: string;
-        expires_at: string;
-      } | null;
-    };
+    .maybeSingle();
 
   if (!invitation || invitation.status !== 'pending') {
     return { success: false, message: 'Invitation is no longer valid.' };

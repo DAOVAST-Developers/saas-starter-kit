@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { stripe } from '@/lib/stripe/client';
+import { getStripeClient } from '@/lib/stripe/client';
 import { createClient } from '@/lib/supabase/server';
 
 /**
@@ -30,7 +30,14 @@ export async function POST(request: NextRequest) {
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? request.nextUrl.origin;
 
-  const session = await stripe.billingPortal.sessions.create({
+  let stripeClient;
+  try {
+    stripeClient = getStripeClient();
+  } catch {
+    return NextResponse.json({ error: 'Stripe is not configured' }, { status: 500 });
+  }
+
+  const session = await stripeClient.billingPortal.sessions.create({
     customer: sub.stripe_customer_id,
     return_url: `${siteUrl}/settings/billing`,
   });

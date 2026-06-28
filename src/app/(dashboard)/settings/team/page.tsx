@@ -21,16 +21,10 @@ export default async function TeamPage() {
 
   const supabase = await createClient();
 
-  const { data: members } = await (supabase as any)
+  const { data: members } = await supabase
     .from('organization_members')
     .select('role, user_id, profiles(full_name, avatar_url)')
-    .eq('org_id', activeOrg.id) as {
-      data: Array<{
-        role: string;
-        user_id: string;
-        profiles: { full_name: string | null; avatar_url: string | null } | null;
-      }> | null;
-    };
+    .eq('org_id', activeOrg.id);
 
   const { data: invitations } = await supabase
     .from('organization_invitations')
@@ -54,9 +48,7 @@ export default async function TeamPage() {
         <h2 className="border-b border-border p-4 font-medium">Members</h2>
         <ul className="divide-y divide-border">
           {(members ?? []).map((m) => {
-            const profile = m.profiles as unknown as
-              | { full_name: string | null }
-              | null;
+            const profile = (m as unknown as { profiles?: { full_name: string | null; avatar_url: string | null } | null }).profiles;
             return (
               <li key={m.user_id} className="flex items-center justify-between p-4">
                 <span className="text-sm">{profile?.full_name ?? m.user_id}</span>
