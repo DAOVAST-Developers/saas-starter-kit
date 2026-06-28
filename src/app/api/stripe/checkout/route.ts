@@ -30,13 +30,13 @@ export async function POST(request: NextRequest) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? request.nextUrl.origin;
 
   // Reuse an existing Stripe customer if we have one for this user.
-  const { data: existing } = await supabase
+  const { data: existing } = await (supabase as any)
     .from('subscriptions')
     .select('stripe_customer_id')
     .eq('user_id', user.id)
     .not('stripe_customer_id', 'is', null)
     .limit(1)
-    .maybeSingle();
+    .maybeSingle() as { data: { stripe_customer_id: string | null } | null };
 
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',

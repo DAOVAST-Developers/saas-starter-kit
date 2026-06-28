@@ -16,13 +16,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { data: sub } = await supabase
+  const { data: sub } = await (supabase as any)
     .from('subscriptions')
     .select('stripe_customer_id')
     .eq('user_id', user.id)
     .not('stripe_customer_id', 'is', null)
     .limit(1)
-    .maybeSingle();
+    .maybeSingle() as { data: { stripe_customer_id: string | null } | null };
 
   if (!sub?.stripe_customer_id) {
     return NextResponse.json({ error: 'No billing account found' }, { status: 404 });

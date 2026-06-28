@@ -21,10 +21,16 @@ export default async function TeamPage() {
 
   const supabase = await createClient();
 
-  const { data: members } = await supabase
+  const { data: members } = await (supabase as any)
     .from('organization_members')
     .select('role, user_id, profiles(full_name, avatar_url)')
-    .eq('org_id', activeOrg.id);
+    .eq('org_id', activeOrg.id) as {
+      data: Array<{
+        role: string;
+        user_id: string;
+        profiles: { full_name: string | null; avatar_url: string | null } | null;
+      }> | null;
+    };
 
   const { data: invitations } = await supabase
     .from('organization_invitations')

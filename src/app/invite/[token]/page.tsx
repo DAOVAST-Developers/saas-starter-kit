@@ -10,11 +10,20 @@ export default async function InvitePage({
   const { token } = await params;
   const supabase = await createClient();
 
-  const { data: invitation } = await supabase
+  const { data: invitation } = await (supabase as any)
     .from('organization_invitations')
     .select('id, email, role, status, expires_at, organizations(name)')
     .eq('token', token)
-    .maybeSingle();
+    .maybeSingle() as {
+      data: {
+        id: string;
+        email: string;
+        role: string;
+        status: string;
+        expires_at: string;
+        organizations: { name: string } | null;
+      } | null;
+    };
 
   if (!invitation) {
     notFound();

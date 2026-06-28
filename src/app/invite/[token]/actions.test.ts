@@ -9,7 +9,7 @@ const adminUpdateEq = jest.fn(async () => ({ error: null }));
 
 jest.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({
-    auth: { getUser: (...a: unknown[]) => getUser(...a) },
+    auth: { getUser },
     from: () => ({
       select: () => ({ eq: () => ({ maybeSingle: async () => invitationResult }) }),
     }),
@@ -19,8 +19,8 @@ jest.mock('@/lib/supabase/server', () => ({
 jest.mock('@/lib/supabase/admin', () => ({
   createAdminClient: () => ({
     from: () => ({
-      upsert: (...a: unknown[]) => adminUpsert(...a),
-      update: () => ({ eq: (...a: unknown[]) => adminUpdateEq(...a) }),
+      upsert: adminUpsert,
+      update: () => ({ eq: adminUpdateEq }),
     }),
   }),
 }));

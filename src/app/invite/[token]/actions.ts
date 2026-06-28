@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import type { OrgRole } from '@/types/database';
 
 export interface AcceptResult {
   success: boolean;
@@ -22,11 +23,20 @@ export async function acceptInvitation(token: string): Promise<AcceptResult> {
     return { success: false, message: 'Please sign in to accept this invitation.' };
   }
 
-  const { data: invitation } = await supabase
+  const { data: invitation } = await (supabase as any)
     .from('organization_invitations')
     .select('*')
     .eq('token', token)
-    .maybeSingle();
+    .maybeSingle() as {
+      data: {
+        id: string;
+        org_id: string;
+        email: string;
+        role: string;
+        status: string;
+        expires_at: string;
+      } | null;
+    };
 
   if (!invitation || invitation.status !== 'pending') {
     return { success: false, message: 'Invitation is no longer valid.' };
@@ -52,7 +62,7 @@ export async function acceptInvitation(token: string): Promise<AcceptResult> {
       {
         org_id: invitation.org_id,
         user_id: user.id,
-        role: invitation.role,
+        role: invitation.role as OrgRole,
       },
       { onConflict: 'org_id,user_id' },
     );

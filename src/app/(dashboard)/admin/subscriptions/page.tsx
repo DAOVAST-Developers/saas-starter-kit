@@ -18,7 +18,7 @@ export default async function AdminSubscriptionsPage({
     .select('id, plan, status, stripe_customer_id, current_period_end')
     .order('created_at', { ascending: false });
 
-  if (plan) query = query.eq('plan', plan);
+  if (plan) query = query.eq('plan', plan as PlanTier);
   if (status) query = query.eq('status', status);
 
   const { data: subscriptions } = await query;

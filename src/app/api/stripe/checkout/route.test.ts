@@ -6,7 +6,7 @@ const getUser = jest.fn();
 
 jest.mock('@/lib/supabase/server', () => ({
   createClient: async () => ({
-    auth: { getUser: (...a: unknown[]) => getUser(...a) },
+    auth: { getUser: (...a: any[]) => (getUser as any)(...a) },
     from: () => ({
       select: () => ({
         eq: () => ({ not: () => ({ limit: () => ({ maybeSingle: async () => ({ data: null }) }) }) }),
@@ -17,7 +17,7 @@ jest.mock('@/lib/supabase/server', () => ({
 
 const sessionsCreate = jest.fn(async () => ({ url: 'https://checkout.stripe.com/x' }));
 jest.mock('@/lib/stripe/client', () => ({
-  stripe: { checkout: { sessions: { create: (...a: unknown[]) => sessionsCreate(...a) } } },
+  stripe: { checkout: { sessions: { create: (...a: any[]) => (sessionsCreate as any)(...a) } } },
 }));
 
 import { POST } from './route';

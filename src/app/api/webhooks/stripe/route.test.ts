@@ -12,17 +12,17 @@ const upsertMock = jest.fn(async () => ({ error: null }));
 
 jest.mock('@/lib/stripe/client', () => ({
   stripe: {
-    webhooks: { constructEvent: (...a: unknown[]) => constructEvent(...a) },
-    subscriptions: { retrieve: (...a: unknown[]) => subscriptionsRetrieve(...a) },
+    webhooks: { constructEvent: (...a: any[]) => (constructEvent as any)(...a) },
+    subscriptions: { retrieve: (...a: any[]) => (subscriptionsRetrieve as any)(...a) },
   },
 }));
 
 jest.mock('@/lib/supabase/admin', () => ({
   createAdminClient: () => ({
     from: () => ({
-      insert: (...a: unknown[]) => insertMock(...a),
-      upsert: (...a: unknown[]) => upsertMock(...a),
-      delete: () => ({ eq: (...a: unknown[]) => deleteEqMock(...a) }),
+      insert: (...a: any[]) => (insertMock as any)(...a),
+      upsert: (...a: any[]) => (upsertMock as any)(...a),
+      delete: () => ({ eq: (...a: any[]) => (deleteEqMock as any)(...a) }),
     }),
     auth: { admin: { getUserById: jest.fn(async () => ({ data: { user: null } })) } },
   }),

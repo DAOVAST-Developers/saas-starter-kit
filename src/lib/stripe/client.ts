@@ -7,7 +7,7 @@ if (!secretKey) {
 }
 
 export const stripe = new Stripe(secretKey, {
-  apiVersion: '2024-09-30.acacia',
+  apiVersion: '2025-02-24.acacia',
   typescript: true,
   appInfo: { name: 'saas-starter-kit' },
 });
