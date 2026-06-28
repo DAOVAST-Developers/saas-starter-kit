@@ -3,6 +3,7 @@
 import { randomBytes } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { sendTeamInviteEmail } from '@/lib/email/send';
 import type { OrgRole } from '@/types/database';
 
 const VALID_ROLES: OrgRole[] = ['member', 'admin'];
@@ -39,9 +40,17 @@ export async function inviteMember(input: {
     Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000,
   ).toISOString();
 
+  const email = input.email.toLowerCase().trim();
+
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('name')
+    .eq('id', input.orgId)
+    .maybeSingle();
+
   const { error } = await supabase.from('organization_invitations').insert({
     org_id: input.orgId,
-    email: input.email.toLowerCase().trim(),
+    email,
     role,
     invited_by: user.id,
     token,
@@ -52,9 +61,13 @@ export async function inviteMember(input: {
     return { success: false, message: error.message };
   }
 
-  // TODO(Phase 8): send invitation email via Resend with the accept link
-  // `${SITE_URL}/invite/${token}`.
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? '';
+  await sendTeamInviteEmail(email, {
+    orgName: org?.name ?? 'your team',
+    role,
+    acceptUrl: `${siteUrl}/invite/${token}`,
+  });
 
   revalidatePath('/settings/team');
-  return { success: true, message: `Invitation sent to ${input.email}` };
+  return { success: true, message: `Invitation sent to ${email}` };
 }

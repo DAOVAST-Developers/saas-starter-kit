@@ -1,93 +1,155 @@
-# saas-starter-kit
+# SaaS Starter Kit
 
+Production-grade, open-source SaaS boilerplate built with the modern Next.js stack. Auth, subscription billing, teams with role-based access, a protected dashboard, an admin panel, transactional email, and rate limiting — wired together and ready to extend.
 
+## Features
 
-## Getting started
+- **Auth** — email/password + Google & GitHub OAuth via Supabase (`@supabase/ssr`)
+- **Billing** — Stripe subscriptions (Free / Pro / Enterprise) with a hardened webhook handler (signature verification + idempotency)
+- **Dashboard** — protected pages, profile settings, billing & plan upgrade via Stripe Checkout + Customer Portal
+- **Teams** — organizations, email invitations, role-based access (owner / admin / member)
+- **Admin panel** — users, subscriptions, and MRR (role-gated)
+- **Email** — transactional emails (welcome, invoice, password reset, team invite) via Resend + React Email
+- **Rate limiting** — per-route tiers via Upstash Ratelimit, enforced in middleware
+- **Testing** — Jest + React Testing Library (logic, components, webhook, auth/authz)
+- **Docker** — multi-stage build + a one-command local dev stack
+- **CI** — GitHub Actions (lint / type-check / test / build) and GitLab CI
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Tech stack
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 15 (App Router) |
+| Language | TypeScript (strict) |
+| Auth & DB | Supabase (Postgres + RLS) |
+| Payments | Stripe |
+| Styling | Tailwind CSS v4 + shadcn-style UI |
+| State | Zustand |
+| Data fetching | React Query |
+| Email | Resend + React Email |
+| Rate limiting | Upstash Ratelimit |
+| Testing | Jest + React Testing Library |
 
-## Add your files
+## Quick start
 
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Configure environment
+cp .env.example .env.local
+# Fill in the values (see Environment variables below)
+
+# 3. Set up the database (Supabase CLI)
+supabase start            # starts local Supabase (Postgres, Auth, Studio)
+supabase db reset         # applies supabase/migrations/*
+
+# 4. Run the dev server
+npm run dev               # http://localhost:3000
+```
+
+## Environment variables
+
+All variables are documented in `.env.example`.
+
+| Variable | Required | Description |
+|---|---|---|
+| `NEXT_PUBLIC_SITE_URL` | yes | App base URL (e.g. `http://localhost:3000`) |
+| `NEXT_PUBLIC_SUPABASE_URL` | yes | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | yes | Supabase anon (public) key |
+| `SUPABASE_SERVICE_ROLE_KEY` | yes | Service role key — **server only**, bypasses RLS |
+| `STRIPE_SECRET_KEY` | yes | Stripe secret key |
+| `STRIPE_WEBHOOK_SECRET` | yes | Stripe webhook signing secret |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | yes | Stripe publishable key |
+| `STRIPE_PRICE_ID_PRO` | yes | Stripe Price ID for the Pro plan |
+| `STRIPE_PRICE_ID_ENTERPRISE` | yes | Stripe Price ID for the Enterprise plan |
+| `RESEND_API_KEY` | no* | Resend API key (email is a no-op if unset) |
+| `EMAIL_FROM` | no | From address for transactional email |
+| `UPSTASH_REDIS_REST_URL` | no* | Upstash Redis REST URL (rate limiting no-op if unset) |
+| `UPSTASH_REDIS_REST_TOKEN` | no* | Upstash Redis REST token |
+
+\* Optional in development — the related feature degrades to a safe no-op when unset.
+
+## Database
+
+Schema and RLS policies live in `supabase/migrations/`:
+
+- `00001_initial_schema.sql` — `profiles`, `organizations`, `organization_members`, `organization_invitations`, `subscriptions`; helper functions (`my_org_ids`, `is_org_admin`, `is_app_admin`); `updated_at` and new-user triggers; RLS on every table.
+- `00002_processed_webhook_events.sql` — idempotency ledger for webhooks.
+
+Apply with `supabase db reset` (local) or `supabase db push` (linked project).
+
+## Stripe setup
+
+1. Create three products/prices in Stripe (Free is $0 / no price). Put the Pro and Enterprise Price IDs in your env.
+2. Forward webhooks in development:
+   ```bash
+   stripe listen --forward-to localhost:3000/api/webhooks/stripe
+   ```
+   Copy the `whsec_...` value into `STRIPE_WEBHOOK_SECRET`.
+3. The handler processes `checkout.session.completed`, `customer.subscription.updated|deleted`, and `invoice.payment_succeeded|failed`.
+
+## Running with Docker
+
+```bash
+docker compose up --build
+```
+
+Starts the app, a Postgres-based Supabase DB (migrations auto-applied), Supabase Studio, and Redis. For full Auth/Storage parity, run the Supabase CLI (`supabase start`) alongside.
+
+## Testing
+
+```bash
+npm test            # run the suite
+npm run test:watch  # watch mode
+```
+
+Covers `cn`/config logic, UI components, the Zustand store, the Stripe webhook (signature + idempotency), checkout authorization, and invitation acceptance authorization.
+
+## Scripts
+
+| Script | Description |
+|---|---|
+| `npm run dev` | Start the dev server |
+| `npm run build` | Production build (standalone output) |
+| `npm start` | Run the production build |
+| `npm run lint` | ESLint |
+| `npm run type-check` | `tsc --noEmit` |
+| `npm test` | Jest |
+
+## Deployment
+
+**Vercel (recommended)**
+
+1. Import the repo into Vercel.
+2. Add all environment variables from the table above.
+3. Set the Stripe webhook endpoint to `https://your-domain/api/webhooks/stripe` and use that endpoint's signing secret.
+4. Point Supabase Auth redirect URLs at `https://your-domain/callback`.
+
+**Docker / self-hosted**
+
+The `Dockerfile` produces a standalone image (`output: 'standalone'`). Build and run:
+
+```bash
+docker build -t saas-starter-kit .
+docker run -p 3000:3000 --env-file .env.local saas-starter-kit
+```
+
+## Project structure
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/sach.ent9-group/saas-starter-kit.git
-git branch -M main
-git push -uf origin main
+src/
+  app/            # App Router: (auth), (dashboard), api, invite, landing
+  components/     # UI primitives + shared components
+  emails/         # React Email templates
+  hooks/          # React Query hooks
+  lib/            # supabase, stripe, email, guards, rate-limit, utils
+  providers/      # Query + Theme providers
+  stores/         # Zustand stores
+  types/          # Database types
+supabase/migrations/  # SQL schema + RLS
 ```
-
-## Integrate with your tools
-
-* [Set up project integrations](https://gitlab.com/sach.ent9-group/saas-starter-kit/-/settings/integrations)
-
-## Collaborate with your team
-
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
 
 ## License
-For open source projects, say how it is licensed.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+MIT
