@@ -123,6 +123,18 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['subscriptions']['Insert']>;
         Relationships: [];
       };
+      processed_webhook_events: {
+        Row: {
+          id: string;
+          processed_at: string;
+        };
+        Insert: {
+          id: string;
+          processed_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['processed_webhook_events']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
