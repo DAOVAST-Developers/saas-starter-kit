@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # SaaS Starter Kit
 
 Production-grade, open-source SaaS boilerplate built with the modern Next.js stack. Auth, subscription billing, teams with role-based access, a protected dashboard, an admin panel, transactional email, and rate limiting — wired together and ready to extend.
@@ -153,3 +154,7 @@ supabase/migrations/  # SQL schema + RLS
 ## License
 
 MIT
+=======
+# saas-starter-kit
+Next.js SaaS Starter Kit
+>>>>>>> 2e44f5caa3ddf235b6f293e27ab8e6ff049ce570
